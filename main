@@ -1,0 +1,287 @@
+
+import pygame
+from pygame import *
+
+# Инициализация Pygame
+pygame.init()
+
+
+class GameSprite(pygame.sprite.Sprite):
+    def __init__(self, filename, x, y, w, h, speed):
+        super().__init__()
+        self.image = transform.scale(image.load(filename), (w, h))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.speed = speed
+        self.original_image = self.image  # Оригинальное изображение для вращения
+        self.alive = True  # Флаг для проверки жив ли игрок
+
+    def update(self, screen):
+        if self.alive:
+            screen.blit(self.image, (self.rect.x, self.rect.y))
+
+    def rotate(self, angle):
+        """Поворот изображения"""
+        self.image = transform.rotate(self.original_image, angle)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+
+class Player1(GameSprite):
+    def __init__(self, filename, x, y, w, h, speed):
+        super().__init__(filename, x, y, w, h, speed)
+        self.direction = 'right'  # Направление, в котором смотрит игрок
+        self.hp = 10  # Начальное количество здоровья для игрока 1
+
+    def update(self, screen):
+        if not self.alive:
+            return  # Игрок мертв, не двигаемся
+
+        keys = key.get_pressed()
+        new_direction = self.direction  # Начинаем с текущего направления
+
+        if keys[K_a] and self.rect.x > 0:  # Двигаемся влево
+            self.rect.x -= self.speed
+            new_direction = "left"
+        if keys[K_d] and self.rect.x < 1130:  # Двигаемся вправо
+            self.rect.x += self.speed
+            new_direction = 'right'
+        if keys[K_w] and self.rect.y > 0:  # Двигаемся вверх
+            self.rect.y -= self.speed
+            new_direction = 'up'
+        if keys[K_s] and self.rect.y < 670:  # Двигаемся вниз
+            self.rect.y += self.speed
+            new_direction = 'down'
+
+        # Поворачиваем картинку только при изменении направления
+        if new_direction != self.direction:
+            self.direction = new_direction
+            self.rotate_player()
+
+        super().update(screen)
+
+    def rotate_player(self):
+        """Поворачиваем изображение в зависимости от направления"""
+        if self.direction == 'left':
+            self.rotate(180)  # Картинка вправо
+        elif self.direction == 'right':
+            self.rotate(0)  # Картинка влево
+        elif self.direction == 'down':
+            self.rotate(270)  # Картинка вверх
+        elif self.direction == 'up':
+            self.rotate(90)  # Картинка вниз
+
+    def fire(self):
+        if not self.alive:
+            return  # Игрок мертв, не стреляет
+        # Пуля будет лететь из центра игрока, учитывая направление
+        bullet = Bullet("bullet-clipart-lg.png", self.rect.centerx, self.rect.centery, 10, 20, 7, self.direction, 1)
+        bullets.add(bullet)
+
+    def take_damage(self):
+        """Метод для получения урона"""
+        self.hp -= 1
+        if self.hp <= 0:
+            self.hp = 0
+            self.alive = False  # Игрок умирает
+
+
+class Player2(GameSprite):
+    def __init__(self, filename, x, y, w, h, speed):
+        super().__init__(filename, x, y, w, h, speed)
+        self.direction = 'right'  # Направление, в котором смотрит игрок
+        self.hp = 10  # Начальное количество здоровья для игрока 2
+
+    def update(self, screen):
+        if not self.alive:
+            return  # Игрок мертв, не двигаемся
+
+        keys = key.get_pressed()
+        new_direction = self.direction  # Начинаем с текущего направления
+
+        if keys[K_LEFT] and self.rect.x > 0:  # Двигаемся влево
+            self.rect.x -= self.speed
+            new_direction = 'left'
+        if keys[K_RIGHT] and self.rect.x < 1130:  # Двигаемся вправо
+            self.rect.x += self.speed
+            new_direction = 'right'
+        if keys[K_UP] and self.rect.y > 0:  # Двигаемся вверх
+            self.rect.y -= self.speed
+            new_direction = 'up'
+        if keys[K_DOWN] and self.rect.y < 670:  # Двигаемся вниз
+            self.rect.y += self.speed
+            new_direction = 'down'
+# Поворачиваем картинку только при изменении направления
+        if new_direction != self.direction:
+            self.direction = new_direction
+            self.rotate_player()
+
+        super().update(screen)
+
+    def rotate_player(self):
+        """Поворачиваем изображение в зависимости от направления"""
+        if self.direction == 'right':
+            self.rotate(180)  # Картинка вправо
+        elif self.direction == 'left':
+            self.rotate(0)  # Картинка влево
+        elif self.direction == 'up':
+            self.rotate(270)  # Картинка вверх
+        elif self.direction == 'down':
+            self.rotate(90)  # Картинка вниз
+
+    def fire(self):
+        if not self.alive:
+            return  # Игрок мертв, не стреляет
+        # Пуля будет лететь из центра игрока, учитывая направление
+        bullet = Bullet("bullet-clipart-lg.png", self.rect.centerx, self.rect.centery, 10, 20, 15, self.direction, 2)
+        bullets.add(bullet)
+
+    def take_damage(self):
+        """Метод для получения урона"""
+        self.hp -= 1
+        if self.hp <= 0:
+            self.hp = 0
+            self.alive = False  # Игрок умирает
+
+
+class Bullet(GameSprite):
+    def __init__(self, filename, x, y, w, h, speed, direction, owner):
+        super().__init__(filename, x, y, w, h, speed)
+        self.direction = direction  # Направление, в котором должна двигаться пуля
+        self.owner = owner  # Кто выстрелил пулю: 1 - игрок 1, 2 - игрок 2
+
+    def update(self):
+        if not self.alive:
+            return  # Пуля мертва
+
+        if self.direction == 'right':
+            self.rect.x += self.speed  # Двигаемся вправо
+        elif self.direction == 'left':
+            self.rect.x -= self.speed  # Двигаемся влево
+        elif self.direction == 'up':
+            self.rect.y -= self.speed  # Двигаемся вверх
+        elif self.direction == 'down':
+            self.rect.y += self.speed  # Двигаемся вниз
+
+        # Проверка на столкновение с игроками, чтобы только врагу наносился урон
+        if self.rect.colliderect(player1.rect) and self.owner != 1:
+            player1.take_damage()
+            self.kill()
+        if self.rect.colliderect(player2.rect) and self.owner != 2:
+            player2.take_damage()
+            self.kill()
+
+        # Удаляем пулю, если она выходит за пределы экрана
+        if self.rect.x < 0 or self.rect.x > 1200 or self.rect.y < 0 or self.rect.y > 1000:
+            self.kill()
+
+
+# Инициализация экрана и объектов
+window = pygame.display.set_mode((1200, 1000))
+pygame.display.set_caption("Лабіринт")
+
+background = pygame.transform.scale(pygame.image.load("pixel-8-bit-game-background-illustration-pixel-art-vector.jpg"), (1300, 800))
+player1 = Player1("blue.png", 100, 50, 70, 70, 5)
+player2 = Player2("red.png", 1000, 600, 70, 70, 5)
+
+# Группа для пуль
+bullets = pygame.sprite.Group()
+
+# Таймер для управления FPS
+timer = pygame.time.Clock()
+fps = 60
+
+# Шрифт для отображения счета
+font = pygame.font.Font(None, 36)
+
+# Переменные для подсчета побед и раундов
+score_player1 = 0
+score_player2 = 0
+rounds = 1
+
+# Переменная для отслеживания конца игры
+finished = False
+end_game = False
+
+while not end_game:
+    winner_text = ""  # Переменная для текста победителя
+
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
+            end_game = True
+        if e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE:
+            player1.fire()  # Игрок 1 стреляет
+        if e.type == pygame.KEYDOWN and e.key == pygame.K_BACKSPACE:
+            player2.fire()  # Игрок 2 стреляет
+
+# Проверяем, кто победил
+    if not player1.alive:
+        score_player2 += 1  # Игрок 2 победил
+        winner_text = "Player 2 Wins this Round!"
+        rounds += 1
+        player1.hp = 10  # Восстановление здоровья игрока 1
+        player2.hp = 10  # Восстановление здоровья игрока 2
+        player1.alive = True  # Игрок 1 жив
+        player2.alive = True  # Игрок 2 жив
+        player1.rect.x = 100  # Сброс позиции игрока 1
+        player1.rect.y = 50
+        player2.rect.x = 1000  # Сброс позиции игрока 2
+        player2.rect.y = 600
+        finished = False
+    elif not player2.alive:
+        score_player1 += 1  # Игрок 1 победил
+        winner_text = "Player 1 Wins this Round!"
+        rounds += 1
+        player1.hp = 10  # Восстановление здоровья игрока 1
+        player2.hp = 10  # Восстановление здоровья игрока 2
+        player1.alive = True  # Игрок 1 жив
+        player2.alive = True  # Игрок 2 жив
+        player1.rect.x = 100  # Сброс позиции игрока 1
+        player1.rect.y = 50
+        player2.rect.x = 1000  # Сброс позиции игрока 2
+        player2.rect.y = 600
+        finished = False
+
+    if rounds > 5:  # После 5 раундов игра заканчивается
+        winner_message = "Game Over"
+        end_game = True
+        if score_player1 > score_player2:
+            winner_message = "Player 1 Wins the Game!"
+        elif score_player1 < score_player2:
+            winner_message = "Player 2 Wins the Game!"
+        else:
+            winner_message = "It's a Draw!"
+
+    if not finished:
+        window.blit(background, (0, 0))
+
+        player1.update(window)
+        player2.update(window)
+
+        bullets.update()
+        bullets.draw(window)
+
+        # Отображаем количество HP игроков
+        hp_text1 = font.render(f"Player 1 HP: {player1.hp}", True, (255, 255, 255))
+        hp_text2 = font.render(f"Player 2 HP: {player2.hp}", True, (255, 255, 255))
+        window.blit(hp_text1, (10, 10))
+        window.blit(hp_text2, (1000, 10))
+
+        # Отображаем счет побед
+        score_text1 = font.render(f"Player 1 Score: {score_player1}", True, (0, 0, 0))
+        score_text2 = font.render(f"Player 2 Score: {score_player2}", True, (0, 0, 0))
+        window.blit(score_text1, (10, 50))
+        window.blit(score_text2, (1000, 50))
+
+        # Отображаем, кто победил в раунде
+        if winner_text:
+            round_winner_text = font.render(winner_text, True, (255, 0, 0))
+            window.blit(round_winner_text, (500, 200))
+
+        # Если завершена игра, отображаем финальный результат
+        if end_game:
+            game_over_text = font.render(winner_message, True, (255, 255, 255))
+            window.blit(game_over_text, (500, 400))
+
+        pygame.display.update()
+        timer.tick(fps)
